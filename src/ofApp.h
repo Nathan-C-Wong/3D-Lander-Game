@@ -39,6 +39,8 @@ class ofApp : public ofBaseApp{
 		glm::vec3 ofApp::getMousePointOnPlane(glm::vec3 p , glm::vec3 n);
 		void ofApp::collisionResolution();
 		void initThreeLighting();
+		void updateLanderBounds();
+		Box transformBoundingBox(const ofMatrix4x4& mat, const ofVec3f& rawMin, const ofVec3f& rawMax);
 
 		ofEasyCam cam;
 		ofxAssimpModelLoader mars, lander;
@@ -82,18 +84,22 @@ class ofApp : public ofBaseApp{
 		bool resolvingCollision = false;
 
 		// Time 
-
 		float buildTreeTime;
 		float raySearchTime;
 
+		// Ship object
 		DynamicShape spaceShip;
+		int intersectAmt = 0;
+		float altitude = -1;
 
+		// Keymap and movements
 		map<int, bool> keymap;
 		bool movingForward;
 		bool movingBackward;
 		bool movingLeft;
 		bool movingRight;
-
 		bool isThrusting;
 
+		// Fonts
+		ofTrueTypeFont altitudeFont;
 };
