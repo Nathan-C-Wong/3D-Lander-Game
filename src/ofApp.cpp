@@ -135,7 +135,7 @@ void ofApp::update() {
 	}
 
 	if (bLanderLoaded) {
-		lander.setRotation(0, aroundY, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
+		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
 		lander.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
 		spaceShip.integrate();
 	}
@@ -153,16 +153,27 @@ void ofApp::update() {
 	}
 	if (keymap[OF_KEY_RIGHT] || keymap['D'] || keymap['d']) {
 		if (bLanderLoaded) {
-			aroundY -= 5;
-			spaceShip.angle -= 5;
+			//spaceShip.angle -= 5;
+			spaceShip.turnRight();
 		}
 	}
 	if (keymap[OF_KEY_LEFT] || keymap['A'] || keymap['a']) {
 		if (bLanderLoaded) {
-			aroundY += 5;
-			spaceShip.angle += 5;
+			//spaceShip.angle += 5;
+			spaceShip.turnLeft();
 		}
 	}
+	if (keymap[' ']) {
+		if (bLanderLoaded) {
+			spaceShip.moveUp();
+		}
+	}
+	if (keymap['X'] || keymap['x']) {
+		if (bLanderLoaded) {
+			spaceShip.moveDown();
+		}
+	}
+
 
 	// Intersection Testing
 	glm::vec3 landerPos = lander.getPosition();
@@ -372,7 +383,7 @@ void ofApp::keyPressed(int key) {
 		break;
 	case OF_KEY_DEL:
 		break;
-	case ' ':
+	case '/':
 		if (collided) {
 			resolvingCollision = true;
 		}

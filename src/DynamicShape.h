@@ -10,6 +10,12 @@ public:
     void integrate();   // Update physics state
     void applyForce(glm::vec3 force); //Apply force
     void applyTorque(float torqueAmount);
+    void moveForward();
+    void moveBackward();
+    void turnRight();
+    void turnLeft();
+    void moveUp();
+    void moveDown();
 
     glm::vec3 velocity;
     glm::vec3 acceleration;
