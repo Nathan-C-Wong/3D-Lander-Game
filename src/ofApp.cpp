@@ -28,8 +28,6 @@ void ofApp::setup(){
 	initLightingAndMaterials();
 	//initThreeLighting();
 
-	//mars.loadModel("geo/mars-low-5x-v2.obj");
-	//mars.loadModel("geo/moon-houdini.obj");
 	mars.loadModel("geo/terrainTest9.obj");
 	mars.setScaleNormalization(false);
 
@@ -37,6 +35,10 @@ void ofApp::setup(){
 	//
 	gui.setup();
 	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+
+	// Font
+	altitudeFont.load("fonts/Play-Regular.ttf", 16); 
+
 
 	bHide = false;
 	
@@ -63,7 +65,7 @@ void ofApp::setup(){
 
 	cout << "Number of Verts: " << mars.getMesh(0).getNumVertices() << endl;
 
-	testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
+	//testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
 
 	vector<Octree> octrees; 
@@ -92,23 +94,6 @@ void ofApp::setup(){
 		float scale = 0.05f;
 		lander.setScale(scale, scale, scale);
 
-		// Compute world-space bounding box
-		ofVec3f rawMin = lander.getSceneMin();
-		ofVec3f rawMax = lander.getSceneMax();
-		ofMatrix4x4 mat = lander.getModelMatrix();
-
-		ofVec3f worldMin = mat.preMult(rawMin);
-		ofVec3f worldMax = mat.preMult(rawMax);
-
-		glm::vec3 center = (worldMin + worldMax) / 2.0f;
-		glm::vec3 halfSize = (worldMax - worldMin) / 2.0f * 0.5f;  // scale down by 0.5
-		glm::vec3 newMin = center - halfSize;
-		glm::vec3 newMax = center + halfSize;
-
-		landerBounds = Box(Vector3(newMin.x, newMin.y, newMin.z),
-			Vector3(newMax.x, newMax.y, newMax.z));
-
-
 		bboxList.clear();
 		for (int i = 0; i < lander.getMeshCount(); i++) {
 			bboxList.push_back(Octree::meshBounds(lander.getMesh(i)));
@@ -128,6 +113,13 @@ void ofApp::setup(){
 void ofApp::update() {
 	if (colBoxList.size() >= 10) {
 		collided = true;
+	}
+	if (colBoxList.size() < 10) {
+		collided = false;
+	}
+
+	if (collided) {
+		cout << "Collided " << intersectAmt++ << endl;
 	}
 
 	if (resolvingCollision) {
@@ -175,21 +167,82 @@ void ofApp::update() {
 	}
 
 
-	// Intersection Testing
-	glm::vec3 landerPos = lander.getPosition();
+	// Intersection Testing 
+	// Get the raw (local-space) min/max of the lander
+	ofVec3f rawMin = lander.getSceneMin();
+	ofVec3f rawMax = lander.getSceneMax();
+	ofMatrix4x4 mat = lander.getModelMatrix();
 
-	ofVec3f min = lander.getSceneMin() + lander.getPosition();
-	ofVec3f max = lander.getSceneMax() + lander.getPosition();
+	// Generate all 8 corners of the bounding box
+	std::vector<ofVec3f> corners;
+	corners.push_back(mat.preMult(ofVec3f(rawMin.x, rawMin.y, rawMin.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMin.x, rawMin.y, rawMax.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMin.x, rawMax.y, rawMin.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMin.x, rawMax.y, rawMax.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMax.x, rawMin.y, rawMin.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMax.x, rawMin.y, rawMax.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMax.x, rawMax.y, rawMin.z)));
+	corners.push_back(mat.preMult(ofVec3f(rawMax.x, rawMax.y, rawMax.z)));
 
-	Box bounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
+	// Initialize new min and max to the first corner
+	float minX = corners[0].x, minY = corners[0].y, minZ = corners[0].z;
+	float maxX = corners[0].x, maxY = corners[0].y, maxZ = corners[0].z;
 
+	// Find min and max across all transformed corners
+	for (int i = 1; i < corners.size(); ++i) {
+		minX = std::min(minX, corners[i].x);
+		minY = std::min(minY, corners[i].y);
+		minZ = std::min(minZ, corners[i].z);
+		maxX = std::max(maxX, corners[i].x);
+		maxY = std::max(maxY, corners[i].y);
+		maxZ = std::max(maxZ, corners[i].z);
+	}
+
+	// Assign to landerBounds
+	landerBounds = Box(Vector3(minX, minY, minZ), Vector3(maxX, maxY, maxZ));
+	
 	colBoxList.clear();
-	octree.intersect(bounds, octree.root, colBoxList);
+	octree.intersect(landerBounds, octree.root, colBoxList);
+
+	// Altitude Sensor
+	ofVec3f landerPos = lander.getPosition();
+	ofVec3f rayOrigin = landerPos;
+	ofVec3f rayDirection = ofVec3f(0, -1, 0); 
+	Ray downRay = Ray(Vector3(rayOrigin.x, rayOrigin.y, rayOrigin.z),
+		Vector3(rayDirection.x, rayDirection.y, rayDirection.z));
+
+	TreeNode altitudeNode;
+	bool hit = octree.intersect(downRay, octree.root, altitudeNode);
+
+	//altitude = -1;
+	if (hit && !altitudeNode.points.empty()) {
+		int closestIndex = altitudeNode.points[0];
+		ofVec3f terrainPoint = octree.mesh.getVertex(closestIndex);
+		altitude = landerPos.y - terrainPoint.y;
+		cout << "Altitude: " << altitude << endl;
+	}
+
+
 }
 //--------------------------------------------------------------
 void ofApp::draw() {
 
 	ofBackground(ofColor::black);
+
+	// Draw altitude reading
+	ofSetColor(ofColor::white);
+	std::string altText = "Altitude: " + ofToString(altitude, 2) + " m";
+	float textWidth = altitudeFont.stringWidth(altText);
+	float textHeight = altitudeFont.stringHeight(altText);
+	float x = ofGetWidth() - textWidth - 20;
+	float y = textHeight + 20;
+	if (altitude > -1) {
+		altitudeFont.drawString(altText, x, y);
+	}
+	else {
+		altitudeFont.drawString("Altitude: Danger!", x, y);
+	}
+	
 
 	glDepthMask(false);
 	if (!bHide) gui.draw();
@@ -221,10 +274,14 @@ void ofApp::draw() {
 					ofPushMatrix();
 					ofMultMatrix(lander.getModelMatrix());
 					ofRotate(-90, 1, 0, 0);
+					updateLanderBounds();
 					Octree::drawBox(bboxList[i]);
 					ofPopMatrix();
 				}
 			}
+
+			//updateLanderBounds();
+			Octree::drawBox(landerBounds);
 
 			if (bLanderSelected) {
 
@@ -237,7 +294,9 @@ void ofApp::draw() {
 
 				Box bounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
 				ofSetColor(ofColor::white);
-				Octree::drawBox(bounds);
+
+				// The bounding box
+				//Octree::drawBox(bounds);
 
 				// draw colliding boxes
 				//
@@ -342,9 +401,6 @@ void ofApp::keyPressed(int key) {
 	case 'f':
 		ofToggleFullscreen();
 		break;
-	case 'H':
-	case 'h':
-		break;
 	case 'L':
 	case 'l': //
 		bDisplayLeafNodes = !bDisplayLeafNodes;
@@ -383,7 +439,7 @@ void ofApp::keyPressed(int key) {
 		break;
 	case OF_KEY_DEL:
 		break;
-	case '/':
+	case 'j':
 		if (collided) {
 			resolvingCollision = true;
 		}
@@ -486,11 +542,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 	}
 	else {
 		ofVec3f p;
-		float rayStartTime = ofGetElapsedTimeMillis();
 		raySelectWithOctree(p);
-		float rayEndTime = ofGetElapsedTimeMillis();
-
-		raySearchTime = rayEndTime - rayStartTime;
 	}
 }
 
@@ -743,13 +795,13 @@ void ofApp::collisionResolution() {
 	}
 
 	ofVec3f landPos = lander.getPosition();
-	lander.setPosition(landPos.x, landPos.y + 0.1, landPos.z);
+	spaceShip.position = glm::vec3(landPos.x, landPos.y + 0.1, landPos.z);
 
 	colBoxList.clear();
 	ofVec3f min = lander.getSceneMin() + lander.getPosition();
 	ofVec3f max = lander.getSceneMax() + lander.getPosition();
 	Box bounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
-	octree.intersect(bounds, octree.root, colBoxList);
+	octree.intersect(boundingBox, octree.root, colBoxList);
 
 	if (colBoxList.size() < 10) {
 		collided = false;
@@ -795,3 +847,22 @@ void ofApp::initThreeLighting() {
 	rimLight.rotate(180, ofVec3f(0, 1, 0));
 	rimLight.setPosition(0, 5, -7);
 }
+
+void ofApp::updateLanderBounds() {
+	ofVec3f rawMin = lander.getSceneMin();
+	ofVec3f rawMax = lander.getSceneMax();
+	ofMatrix4x4 mat = lander.getModelMatrix();
+
+	ofVec3f worldMin = mat.preMult(rawMin);
+	ofVec3f worldMax = mat.preMult(rawMax);
+
+	glm::vec3 center = (worldMin + worldMax) / 2.0f;
+	glm::vec3 halfSize = (worldMax - worldMin) / 2.0f * 0.5f; 
+
+	glm::vec3 newMin = center - halfSize;
+	glm::vec3 newMax = center + halfSize;
+
+	landerBounds = Box(Vector3(newMin.x, newMin.y, newMin.z),
+		Vector3(newMax.x, newMax.y, newMax.z));
+}
+

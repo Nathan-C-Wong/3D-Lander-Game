@@ -47,21 +47,21 @@ void DynamicShape::integrate() {
 }
 
 void DynamicShape::moveForward() {
-    applyForce(heading() * 1.5 * 20);
+    applyForce(heading() * 1.5 * 50);
 }
 
 void DynamicShape::moveBackward() {
-    applyForce(-heading() * 1.5 * 20);
+    applyForce(-heading() * 1.5 * 50);
 }
 
 void DynamicShape::turnRight() {
     //angle += 5;
-    applyTorque(-1.7f);
+    applyTorque(-0.5f);
 }
 
 void DynamicShape::turnLeft() {
     //angle -= 5;
-    applyTorque(1.7f);
+    applyTorque(0.5f);
 }
 
 void DynamicShape::moveUp() {
