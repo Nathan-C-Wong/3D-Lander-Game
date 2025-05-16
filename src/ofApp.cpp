@@ -47,7 +47,8 @@ void ofApp::setup(){
 	
 	// Color Vector
 	colors = {
-		ofColor::red,
+		//ofColor::red,
+		ofColor::white,
 		ofColor::green,
 		ofColor::blue,
 		ofColor::orange,
@@ -62,6 +63,11 @@ void ofApp::setup(){
 	float startTime = ofGetElapsedTimeMillis();
 	octree.create(mars.getMesh(0), 20);
 	float endTime = ofGetElapsedTimeMillis();
+
+	p1 = mars.getMesh(2);
+	p2 = mars.getMesh(3);
+	p3 = mars.getMesh(4);
+	p4 = mars.getMesh(5);
 
 	buildTreeTime = endTime - startTime;
 	cout << "Octree build time: " << buildTreeTime << " ms" << endl;
@@ -146,7 +152,6 @@ void ofApp::update() {
 
 		if (currentFuel <= 0) {
 			currentFuel = 0;
-			// Optionally disable thrusting
 			isThrusting = false;
 		}
 	}
@@ -327,6 +332,12 @@ void ofApp::draw() {
 	//glDepthMask(true);
 
 	theCam->begin();
+
+	//p1.draw();
+	//p2.draw();
+	//p3.draw();
+	//p4.draw();
+
 	ofPushMatrix();
 	if (bWireframe) {                    // wireframe mode  (include axis)
 		ofDisableLighting();
@@ -352,8 +363,8 @@ void ofApp::draw() {
 					ofPushMatrix();
 					ofMultMatrix(lander.getModelMatrix());
 					ofRotate(-90, 1, 0, 0);
-					updateLanderBounds();
-					//Octree::drawBox(bboxList[i]);
+					updateLanderBounds(); 
+					Octree::drawBox(bboxList[i]);  //box
 					ofPopMatrix();
 				}
 			}
@@ -408,9 +419,9 @@ void ofApp::draw() {
 		cout << "num leaf: " << octree.numLeaf << endl;
     }
 	else if (bDisplayOctree) {
-		//ofNoFill();
-		//ofSetColor(ofColor::white);
-		//octree.draw(numLevels, 0, colors);
+		ofNoFill();
+		ofSetColor(ofColor::white);
+		octree.draw(1, 0, colors);
 	}
 
 	// if point selected, draw a sphere

@@ -50,6 +50,7 @@ class ofApp : public ofBaseApp{
 		ofCamera farCam;
 
 		ofxAssimpModelLoader mars, lander, platform1, platform2, platform3, platform4;
+		ofMesh p1, p2, p3, p4;
 		ofLight light;
 		Box boundingBox, landerBounds;
 		Box testBox;
