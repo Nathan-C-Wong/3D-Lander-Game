@@ -39,6 +39,7 @@ public:
 	int getMeshPointsInBox(const ofMesh &mesh, const vector<int> & points, Box & box, vector<int> & pointsRtn);
 	int getMeshFacesInBox(const ofMesh &mesh, const vector<int> & faces, Box & box, vector<int> & facesRtn);
 	void subDivideBox8(const Box &b, vector<Box> & boxList);
+	bool intersect(const glm::vec3 p, TreeNode& node, TreeNode& nodeRtn);
 
 	ofMesh mesh;
 	TreeNode root;

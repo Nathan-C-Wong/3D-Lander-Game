@@ -261,6 +261,25 @@ void Octree::drawLeafNodes(TreeNode & node) {
 
 }
 
+bool Octree::intersect(const glm::vec3 p, TreeNode& node, TreeNode& nodeRtn) {
+	//bool intersects = false;
+	Vector3 point(p.x, p.y, p.z);
+	if (!node.box.inside(point)) {
+		return false;
+	}
 
+	if (node.children.empty()) {
+		nodeRtn = node;
+		return true;
+	}
+
+	for (int i = 0; i < node.children.size(); i++) {
+		if (intersect(p, node.children[i], nodeRtn)) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 

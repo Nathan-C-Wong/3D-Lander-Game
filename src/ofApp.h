@@ -41,9 +41,15 @@ class ofApp : public ofBaseApp{
 		void initThreeLighting();
 		void updateLanderBounds();
 		Box transformBoundingBox(const ofMatrix4x4& mat, const ofVec3f& rawMin, const ofVec3f& rawMax);
+		bool playerIntersectTerrain(DynamicShape& p, TreeNode& rootNode);
 
 		ofEasyCam cam;
-		ofxAssimpModelLoader mars, lander;
+		ofCamera* theCam;
+		ofCamera topCam;
+		ofCamera onboardCam;
+		ofCamera farCam;
+
+		ofxAssimpModelLoader mars, lander, platform1, platform2, platform3;
 		ofLight light;
 		Box boundingBox, landerBounds;
 		Box testBox;
@@ -102,4 +108,8 @@ class ofApp : public ofBaseApp{
 
 		// Fonts
 		ofTrueTypeFont altitudeFont;
+	
+		// background
+		ofImage backgroundImg;
+
 };

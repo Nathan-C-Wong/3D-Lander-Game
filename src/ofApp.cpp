@@ -16,11 +16,11 @@ void ofApp::setup(){
 	bLanderLoaded = false;
 	bTerrainSelected = true;
 //	ofSetWindowShape(1024, 768);
-	cam.setDistance(10);
-	cam.setNearClip(.1);
-	cam.setFov(65.5);   // approx equivalent to 28mm in 35mm format
+	//cam.setDistance(10);
+	//cam.setNearClip(.1);
+	//cam.setFov(65.5);   // approx equivalent to 28mm in 35mm format
 	ofSetVerticalSync(true);
-	cam.disableMouseInput();
+	//cam.disableMouseInput();
 	ofEnableSmoothing();
 	ofEnableDepthTest();
 
@@ -33,8 +33,9 @@ void ofApp::setup(){
 
 	// create sliders for testing
 	//
-	gui.setup();
-	gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+	//gui.setup();
+	//gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
+	bDisplayOctree = false;
 
 	// Font
 	altitudeFont.load("fonts/Play-Regular.ttf", 16); 
@@ -105,12 +106,31 @@ void ofApp::setup(){
 	else {
 		ofLogError() << "Could not load lander model.";
 	}
+
+	topCam.lookAt(glm::vec3(0, -1, 0));
+	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
+	topCam.setNearClip(.1);
+	onboardCam.lookAt(glm::vec3(0, 0, -1));
+	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z - 6);
+	onboardCam.setFov(65);
+	farCam.lookAt(glm::vec3(0, -1, 0));
+	farCam.setPosition(-715, 80, -800);
+	farCam.setNearClip(.1);
+
+	theCam = &cam;
+
+	backgroundImg.load("images/Starry_Sky.png"); 
 }
  
 //--------------------------------------------------------------
 // incrementally update scene (animation)
 //
 void ofApp::update() {
+
+	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
+	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z - 6);
+	farCam.lookAt(spaceShip.position);
+
 	if (colBoxList.size() >= 10) {
 		collided = true;
 	}
@@ -147,12 +167,14 @@ void ofApp::update() {
 		if (bLanderLoaded) {
 			//spaceShip.angle -= 5;
 			spaceShip.turnRight();
+			//topCam.rotate(-0.5, 0, 1, 0);
 		}
 	}
 	if (keymap[OF_KEY_LEFT] || keymap['A'] || keymap['a']) {
 		if (bLanderLoaded) {
 			//spaceShip.angle += 5;
 			spaceShip.turnLeft();
+			//topCam.rotate(0.5, 0, 1, 0);
 		}
 	}
 	if (keymap[' ']) {
@@ -219,15 +241,21 @@ void ofApp::update() {
 		int closestIndex = altitudeNode.points[0];
 		ofVec3f terrainPoint = octree.mesh.getVertex(closestIndex);
 		altitude = landerPos.y - terrainPoint.y;
-		cout << "Altitude: " << altitude << endl;
+		//cout << "Altitude: " << altitude << endl;
 	}
 
+	topCam.rotate(spaceShip.torque, 0, 1, 0);
+	onboardCam.rotate(spaceShip.torque, 0, 1, 0);
 
 }
 //--------------------------------------------------------------
 void ofApp::draw() {
 
-	ofBackground(ofColor::black);
+	//ofBackground(ofColor::black);
+	ofDisableDepthTest();
+	backgroundImg.draw(0, 0, ofGetWidth(), ofGetHeight());
+	ofEnableDepthTest(); 
+
 
 	// Draw altitude reading
 	ofSetColor(ofColor::white);
@@ -244,11 +272,11 @@ void ofApp::draw() {
 	}
 	
 
-	glDepthMask(false);
-	if (!bHide) gui.draw();
-	glDepthMask(true);
+	//glDepthMask(false);
+	//if (!bHide) gui.draw();
+	//glDepthMask(true);
 
-	cam.begin();
+	theCam->begin();
 	ofPushMatrix();
 	if (bWireframe) {                    // wireframe mode  (include axis)
 		ofDisableLighting();
@@ -275,18 +303,18 @@ void ofApp::draw() {
 					ofMultMatrix(lander.getModelMatrix());
 					ofRotate(-90, 1, 0, 0);
 					updateLanderBounds();
-					Octree::drawBox(bboxList[i]);
+					//Octree::drawBox(bboxList[i]);
 					ofPopMatrix();
 				}
 			}
 
 			//updateLanderBounds();
-			Octree::drawBox(landerBounds);
+			//Octree::drawBox(landerBounds);
 
 			if (bLanderSelected) {
 
-				spaceShip.drawLine();
-				spaceShip.drawDownLine();  // heading that points down
+				//spaceShip.drawLine();
+				//spaceShip.drawDownLine();  // heading that points down
 		
 
 				ofVec3f min = lander.getSceneMin() + lander.getPosition();
@@ -300,9 +328,9 @@ void ofApp::draw() {
 
 				// draw colliding boxes
 				//
-				ofSetColor(ofColor::lightBlue);
+				//ofSetColor(ofColor::lightBlue);
 				for (int i = 0; i < colBoxList.size(); i++) {
-					Octree::drawBox(colBoxList[i]);
+					Octree::drawBox(colBoxList[i]);   // for collision 
 				}
 			}
 		}
@@ -330,9 +358,9 @@ void ofApp::draw() {
 		cout << "num leaf: " << octree.numLeaf << endl;
     }
 	else if (bDisplayOctree) {
-		ofNoFill();
-		ofSetColor(ofColor::white);
-		octree.draw(numLevels, 0, colors);
+		//ofNoFill();
+		//ofSetColor(ofColor::white);
+		//octree.draw(numLevels, 0, colors);
 	}
 
 	// if point selected, draw a sphere
@@ -340,13 +368,13 @@ void ofApp::draw() {
 	if (pointSelected) {
 		ofVec3f p = octree.mesh.getVertex(selectedNode.points[0]);
 		ofVec3f d = p - cam.getPosition();
-		ofSetColor(ofColor::lightGreen);
-		ofDrawSphere(p, .02 * d.length());
+		//ofSetColor(ofColor::lightGreen);
+		//ofDrawSphere(p, .02 * d.length());
 		//cout << "Click Coordinate: " << p << endl;
 	}
 
 	ofPopMatrix();
-	cam.end();
+	theCam->end();
 
 }
 
@@ -448,6 +476,20 @@ void ofApp::keyPressed(int key) {
 		cout << "Spaceship pos: " << spaceShip.position << endl;
 		break;
 
+	case OF_KEY_F1:
+		theCam = &cam;
+		break;
+	case OF_KEY_F2:
+		theCam = &topCam;
+		break;
+	case OF_KEY_F3:
+		theCam = &onboardCam;
+		break;
+	case OF_KEY_F4:
+		theCam = &farCam;
+		break;
+	case OF_KEY_F5:
+		cam.lookAt(spaceShip.position);
 	default:
 		break;
 	}
@@ -866,3 +908,36 @@ void ofApp::updateLanderBounds() {
 		Vector3(newMax.x, newMax.y, newMax.z));
 }
 
+//bool ofApp::playerIntersectTerrain(DynamicShape& p, TreeNode& rootNode) {
+//	glm::vec3 halfSize = glm::vec3(p.playerBox.width, p.playerBox.height, p.playerBox.depth) * 0.5f;
+//	vector<glm::vec3> localCorners;
+//
+//	for (int x = -1; x <= 1; x += 2) {
+//		for (int y = -1; y <= 1; y += 2) {
+//			for (int z = -1; z <= 1; z += 2) {
+//				glm::vec3 corner = glm::vec3(x * halfSize.x, y * halfSize.y, z * halfSize.z);        //finding the 8 corners of player's box
+//				localCorners.push_back(corner);
+//			}
+//		}
+//	}
+//	glm::mat4 transform = p.playerBox.getTransform();
+//	vector<glm::vec3> worldCorners;
+//	for (int i = 0; i < localCorners.size(); i++) {
+//		glm::vec4 world = transform * glm::vec4(localCorners[i], 1.0);
+//		worldCorners.push_back(glm::vec3(world));                //getting 8 corners in world space
+//	}
+//	float minY = worldCorners[0].y;
+//	for (int i = 0; i < worldCorners.size(); i++) {
+//		minY = std::min(minY, worldCorners[i].y);
+//	}
+//	for (int i = 0; i < worldCorners.size(); i++) {
+//		if (abs(worldCorners[i].y - minY) < 0.01f) {  // tolerance on bottom corners
+//			TreeNode hitNode;
+//			if (octree.intersect(worldCorners[i], octree.root, hitNode)) {
+//				return true;
+//			}
+//		}
+//	}
+//
+//	return false;
+//}
