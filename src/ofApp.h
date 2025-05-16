@@ -2,11 +2,11 @@
 
 #include "ofMain.h"
 #include "ofxGui.h"
-#include  "ofxAssimpModelLoader.h"
+#include "ofxAssimpModelLoader.h"
 #include "Octree.h"
 #include <glm/gtx/intersect.hpp>
-
 #include "DynamicShape.h"
+#include "ParticleSystem.h"
 
 class ofApp : public ofBaseApp{
 
@@ -49,8 +49,11 @@ class ofApp : public ofBaseApp{
 		ofCamera onboardCam;
 		ofCamera farCam;
 
-		ofxAssimpModelLoader mars, lander, platform1, platform2, platform3, platform4;
-		ofMesh p1, p2, p3, p4;
+		ofxAssimpModelLoader mars, lander;
+		vector<Octree> octrees;
+		//std::vector<ofMesh> platforms;
+		//std::vector<Octree> platformOctrees;
+
 		ofLight light;
 		Box boundingBox, landerBounds;
 		Box testBox;
@@ -108,22 +111,31 @@ class ofApp : public ofBaseApp{
 
 		// Fonts
 		ofTrueTypeFont altitudeFont;
+
+		// Sound
+		ofSoundPlayer explosionSound;
 	
 		// background
 		ofImage backgroundImg;
 
 		// Attributes
-		glm::vec3 velocity = glm::vec3(0);     // ship's velocity
-		glm::vec3 acceleration = glm::vec3(0); // force applied (gravity, thrust)
-		float gravity = -5.0f;                 // downward gravity force (adjust this)
-		float maxFallSpeed = -5.0f;            // max downward speed (terminal velocity)
+		//glm::vec3 velocity = glm::vec3(0);     // ship's velocity
+		//glm::vec3 acceleration = glm::vec3(0); // force applied (gravity, thrust)
+		float gravity = -10.0f;                 // downward gravity force (adjust this)
+		float maxFallSpeed = -21.0f;            // max downward speed (terminal velocity)
 		bool onGround = false;                // flag for when lander is touching terrain
 		bool crashDetected = false;
-		float maxSafeFallSpeed = 3.0f;
+		float maxSafeFallSpeed = 15.0f;
+		float speedIterator = 0;
 
 		// Fuel
 		float maxFuel = 120.0f;       // 120 seconds of thrust
 		float currentFuel = 120.0f;   
 		bool isThrusting = false;
 
+		// Boom
+		ParticleSystem explosionSystem;
+		ParticleSystem thrustParticles;
+
+		bool explosionTriggered = false;
 };

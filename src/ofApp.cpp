@@ -28,7 +28,7 @@ void ofApp::setup(){
 	initLightingAndMaterials();
 	//initThreeLighting();
 
-	mars.loadModel("geo/terrainTest9.obj");
+	mars.loadModel("geo/finalTerrain.obj");
 	mars.setScaleNormalization(false);
 
 	// create sliders for testing
@@ -42,6 +42,8 @@ void ofApp::setup(){
 	// Font
 	altitudeFont.load("fonts/Play-Regular.ttf", 16); 
 
+	// Sound
+	explosionSound.load("sounds/projectile_explosion.mp3");
 
 	bHide = false;
 	
@@ -64,10 +66,10 @@ void ofApp::setup(){
 	octree.create(mars.getMesh(0), 20);
 	float endTime = ofGetElapsedTimeMillis();
 
-	p1 = mars.getMesh(2);
-	p2 = mars.getMesh(3);
-	p3 = mars.getMesh(4);
-	p4 = mars.getMesh(5);
+	/*for (int i = 2; i < 7; i++) { 
+		platforms.push_back(mars.getMesh(i));
+	}*/
+
 
 	buildTreeTime = endTime - startTime;
 	cout << "Octree build time: " << buildTreeTime << " ms" << endl;
@@ -76,23 +78,28 @@ void ofApp::setup(){
 
 	//testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
+	octrees.clear();
+	float scaleFactor = 200.0f;
+	for (int i = 2; i <= 6; i++) {
+		if (i < mars.getMeshCount()) {
+			ofMesh mesh = mars.getMesh(i);
 
-	//vector<Octree> octrees; 
-	//octrees.clear();
-	//for (int i = 2; i <= 6; i++) {
-	//	if (i < mars.getMeshCount()) {
-	//		ofMesh mesh = mars.getMesh(i);
-	//		Octree newOctree;
-	//		newOctree.create(mesh, 20);  // build octree for this mesh
-	//		octrees.push_back(newOctree);
+			for (int v = 0; v < mesh.getNumVertices(); v++) {
+				ofVec3f vert = mesh.getVertex(v);
+				vert *= scaleFactor;
+				mesh.setVertex(v, vert);
+			}
 
-	//		//cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
-	//	}
-	//	else {
-	//		//cout << "Mesh index " << i << " out of range." << endl;
-	//	}
-	//}
+			Octree newOctree;
+			newOctree.create(mesh, 20);  // build octree for this mesh
+			octrees.push_back(newOctree);
 
+			cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
+		}
+		else {
+			cout << "Mesh index " << i << " out of range." << endl;
+		}
+	}
 
 	if (lander.loadModel("geo/shipTest5.obj")) {
 		bLanderLoaded = true;
@@ -134,6 +141,11 @@ void ofApp::setup(){
 	theCam = &cam;
 
 	backgroundImg.load("images/Starry_Sky.png"); 
+
+	explosionSystem.setPosition(ofVec3f(0, 0, 0));
+
+	thrustParticles.setPosition(spaceShip.position);
+
 }
  
 //--------------------------------------------------------------
@@ -156,6 +168,29 @@ void ofApp::update() {
 		}
 	}
 
+	// Boom particles
+	float dt = 1.0f / ofGetFrameRate();
+	explosionSystem.update(dt);
+
+	if (crashDetected && !explosionTriggered) {
+		explosionTriggered = true;
+		explosionSystem.setPosition(spaceShip.position);
+		explosionSystem.start(350);  // 350 particles
+	}
+
+	// Thrust particles
+	thrustParticles.setPosition(spaceShip.position + ofVec3f(0, -3, 0));  // sligthly under lander
+	thrustParticles.update(dt);
+
+	// Control thrust particle emission
+	if (isThrusting && currentFuel > 0) {
+		thrustParticles.startContinuous();
+	}
+	else {
+		thrustParticles.stop();
+	}
+
+
 	if (colBoxList.size() >= 10) {
 		collided = true;
 	}
@@ -163,36 +198,8 @@ void ofApp::update() {
 		collided = false;
 	}
 
-	if (collided) {
-		cout << "Collided " << intersectAmt++ << endl;
-		resolvingCollision = true;
-	}
-
-	if (resolvingCollision) {
-		collisionResolution();
-	}
-
-	/*if (altitude < 4) {
-		cout << "On ground" << endl;
-		onGround = true;
-	}
-	else {
-		onGround = false;
-	}*/
-
-	if (bLanderLoaded) {
-		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
-		lander.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
-		if (!collided) {
-			spaceShip.forces += glm::vec3(0, gravity, 0);
-		}
-		spaceShip.integrate();
-	}
-
-	
-
 	// After velocity update:
-	if ((velocity.y < -maxSafeFallSpeed) && collided) {
+	if ((spaceShip.velocity.y < -maxSafeFallSpeed) && (collided || onGround)) {
 		// Maybe trigger a crash if landed
 		crashDetected = true;
 	}
@@ -200,6 +207,72 @@ void ofApp::update() {
 		cout << "You have crashed!" << endl;
 	}
 
+	if (collided) {
+		//cout << "Collided " << intersectAmt++ << endl;
+		resolvingCollision = true;
+	}
+
+	// Boom
+	if (crashDetected && !explosionTriggered) {
+		explosionTriggered = true;
+		explosionSystem.setPosition(spaceShip.position);
+		explosionSystem.start();
+		explosionSound.play();
+		lander.setScale(0, 0, 0); // hide lander
+	}
+
+	// Altitude Sensor
+	ofVec3f landerPos = lander.getPosition();
+	ofVec3f rayOrigin = landerPos;
+	ofVec3f rayDirection = ofVec3f(0, -1, 0);
+	Ray downRay = Ray(Vector3(rayOrigin.x, rayOrigin.y, rayOrigin.z),
+		Vector3(rayDirection.x, rayDirection.y, rayDirection.z));
+
+	TreeNode altitudeNode;
+	bool hit = octree.intersect(downRay, octree.root, altitudeNode);
+
+	//altitude = -1;
+	if (hit && !altitudeNode.points.empty()) {
+		int closestIndex = altitudeNode.points[0];
+		ofVec3f terrainPoint = octree.mesh.getVertex(closestIndex);
+		altitude = landerPos.y - terrainPoint.y;
+		//cout << "Altitude: " << altitude << endl;
+	}
+
+	if (altitude <= 5) {
+		onGround = true;
+	}
+	else {
+		onGround = false;
+	}
+
+	if (bLanderLoaded) {
+		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
+		lander.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
+		if (!onGround) {
+			spaceShip.forces += glm::vec3(0, gravity, 0);
+		}
+		spaceShip.integrate();
+	}
+
+	if (resolvingCollision) {
+		collisionResolution();
+	}
+
+	if (onGround) {
+		spaceShip.velocity.y = 0;
+	}
+
+	if (explosionTriggered) {
+		spaceShip.velocity.y = 0;
+	}
+
+
+	// Testing downward spd
+	//if (spaceShip.velocity.y < -maxSafeFallSpeed) {
+	//	cout << "Speed Warning! " << spaceShip.velocity.y << endl;//speedIterator++<< endl;
+	//}
+	//cout << "Speed: " << spaceShip.velocity.y << endl;//speedIterator++<< endl;
 
 	// Keymap
 	if (keymap[OF_KEY_UP] || keymap['W'] || keymap['w']) {
@@ -243,8 +316,9 @@ void ofApp::update() {
 	}
 
 
+
 	// Intersection Testing 
-	// Get the raw (local-space) min/max of the lander
+	// Get the local-space min/max of the lander
 	ofVec3f rawMin = lander.getSceneMin();
 	ofVec3f rawMax = lander.getSceneMax();
 	ofMatrix4x4 mat = lander.getModelMatrix();
@@ -280,24 +354,6 @@ void ofApp::update() {
 	colBoxList.clear();
 	octree.intersect(landerBounds, octree.root, colBoxList);
 
-	// Altitude Sensor
-	ofVec3f landerPos = lander.getPosition();
-	ofVec3f rayOrigin = landerPos;
-	ofVec3f rayDirection = ofVec3f(0, -1, 0); 
-	Ray downRay = Ray(Vector3(rayOrigin.x, rayOrigin.y, rayOrigin.z),
-		Vector3(rayDirection.x, rayDirection.y, rayDirection.z));
-
-	TreeNode altitudeNode;
-	bool hit = octree.intersect(downRay, octree.root, altitudeNode);
-
-	//altitude = -1;
-	if (hit && !altitudeNode.points.empty()) {
-		int closestIndex = altitudeNode.points[0];
-		ofVec3f terrainPoint = octree.mesh.getVertex(closestIndex);
-		altitude = landerPos.y - terrainPoint.y;
-		//cout << "Altitude: " << altitude << endl;
-	}
-
 	topCam.rotate(spaceShip.torque, 0, 1, 0);
 	onboardCam.rotate(spaceShip.torque, 0, 1, 0);
 
@@ -308,23 +364,7 @@ void ofApp::draw() {
 	//ofBackground(ofColor::black);
 	ofDisableDepthTest();
 	backgroundImg.draw(0, 0, ofGetWidth(), ofGetHeight());
-	ofDrawBitmapStringHighlight("Fuel Remaining: " + ofToString(currentFuel, 1) + " s", 10, 20);
-	ofEnableDepthTest(); 
-
-
-	// Draw altitude reading
-	ofSetColor(ofColor::white);
-	std::string altText = "Altitude: " + ofToString(altitude, 2) + " m";
-	float textWidth = altitudeFont.stringWidth(altText);
-	float textHeight = altitudeFont.stringHeight(altText);
-	float x = ofGetWidth() - textWidth - 20;
-	float y = textHeight + 20;
-	if (altitude > -1) {
-		altitudeFont.drawString(altText, x, y);
-	}
-	else {
-		altitudeFont.drawString("Altitude: Danger!", x, y);
-	}
+	ofEnableDepthTest();
 	
 
 	//glDepthMask(false);
@@ -337,6 +377,9 @@ void ofApp::draw() {
 	//p2.draw();
 	//p3.draw();
 	//p4.draw();
+
+	explosionSystem.draw();
+	thrustParticles.draw();
 
 	ofPushMatrix();
 	if (bWireframe) {                    // wireframe mode  (include axis)
@@ -398,11 +441,56 @@ void ofApp::draw() {
 	}
 	if (bTerrainSelected) drawAxis(ofVec3f(0, 0, 0));
 
+	// Draw platforms
+	//for (auto& mesh : platforms) {
+	//	mesh.drawFaces(); //mesh.draw();
+	//}
+
+	for (int i = 2; i <= 6; i++) {
+		if (i < mars.getMeshCount()) {
+			ofMesh mesh = mars.getMesh(i);
+			mesh.draw();  
+		}
+	}
+
+	//vector<ofColor> levelColors = {
+	//	ofColor::red,
+	//	ofColor::green,
+	//	ofColor::blue,
+	//	ofColor::yellow,
+	//	ofColor::cyan,
+	//	ofColor::magenta
+	//};
+	//ofNoFill();
+	//// Draw each octree 
+	//for (int i = 0; i < octrees.size(); i++) {
+	//	octrees[i].draw(octrees[i].root, 4, 0, levelColors);
+	//}
 
 
-	if (bDisplayPoints) {                // display points as an option    
+	//ofEnableLighting();
+	//for (int i = 0; i < platforms.size(); i++) {
+	//	ofPushMatrix();
+	//	
+	//	ofTranslate(0, 0, i * 50);
+
+	//	// Assign different colors per platform
+	//	switch (i) {
+	//	case 0: ofSetColor(ofColor::red); break;
+	//	case 1: ofSetColor(ofColor::green); break;
+	//	case 2: ofSetColor(ofColor::blue); break;
+	//	case 3: ofSetColor(ofColor::yellow); break;
+	//	case 4: ofSetColor(ofColor::magenta); break;
+	//	default: ofSetColor(ofColor::white);
+	//	}
+
+	//	platforms[i].drawFaces();
+	//	ofPopMatrix();
+	//}
+
+	if (bDisplayPoints) {                // display points as an option 
 		glPointSize(3);
-		ofSetColor(ofColor::green);
+		//ofSetColor(ofColor::green);
 		mars.drawVertices();
 	}
 
@@ -436,6 +524,25 @@ void ofApp::draw() {
 
 	ofPopMatrix();
 	theCam->end();
+
+
+	// Fuel Reading
+	ofDisableDepthTest();
+	ofDrawBitmapStringHighlight("Fuel Remaining: " + ofToString(currentFuel, 1) + " s", 10, 20);
+
+	// Draw altitude reading
+	ofSetColor(ofColor::white);
+	std::string altText = "Altitude: " + ofToString(altitude, 2) + " m";
+	float textWidth = altitudeFont.stringWidth(altText);
+	float textHeight = altitudeFont.stringHeight(altText);
+	float x = ofGetWidth() - textWidth - 20;
+	float y = textHeight + 20;
+	if (altitude > -1) {
+		altitudeFont.drawString(altText, x, y);
+	}
+	else {
+		altitudeFont.drawString("Altitude: Danger!", x, y);
+	}
 
 }
 

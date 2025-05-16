@@ -1,36 +1,33 @@
 #pragma once
-
 #include "ofMain.h"
 
 class Particle {
 public:
-    glm::vec3 position;
-    glm::vec3 velocity;
-    float lifetime;
-    float age;
+    ofVec3f position;
+    ofVec3f velocity;
     ofColor color;
+    float lifespan;  
+    float age = 0;
+    bool alive = true;
 
-    Particle(glm::vec3 pos, glm::vec3 vel, float life, ofColor c) {
-        position = pos;
-        velocity = vel;
-        lifetime = life;
-        age = 0;
-        color = c;
+    Particle(ofVec3f pos, ofVec3f vel, ofColor c, float life)
+        : position(pos), velocity(vel), color(c), lifespan(life) {
     }
 
     void update(float dt) {
+        if (!alive) return;
+
+        velocity += ofVec3f(0, -9.8 * dt, 0); // gravity
         position += velocity * dt;
         age += dt;
-        velocity *= 0.95f;
+
+        if (age >= lifespan) alive = false;
     }
 
     void draw() {
-        float alpha = ofMap(age, 0, lifetime, 255, 0, true);
+        if (!alive) return;
+        float alpha = ofMap(age, 0, lifespan, 255, 0);
         ofSetColor(color.r, color.g, color.b, alpha);
-        ofDrawCircle(position, 2);
-    }
-
-    bool isDead() {
-        return age >= lifetime;
+        ofDrawSphere(position, 0.5);
     }
 };
