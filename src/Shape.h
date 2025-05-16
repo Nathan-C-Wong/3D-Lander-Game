@@ -48,16 +48,16 @@ public:
     }
 
     // No physics just forward
-    void moveForward() {
-        position += heading() * 10;
-    }
-    // No physics just backward
-    void moveBackward() {
-        position -= heading() * 10;
-    }
+    //void moveForward() {
+    //    position += heading() * 10;
+    //}
+    //// No physics just backward
+    //void moveBackward() {
+    //    position -= heading() * 10;
+    //}
 
     // Data
     glm::vec3 position = glm::vec3(0, 0, 0);
     glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0);
-    float angle;
+    float angle = 0;
 };

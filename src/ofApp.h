@@ -88,8 +88,6 @@ class ofApp : public ofBaseApp{
 
 		DynamicShape spaceShip;
 
-		float aroundY = 0; // angle of rotation
-
 		map<int, bool> keymap;
 		bool movingForward;
 		bool movingBackward;

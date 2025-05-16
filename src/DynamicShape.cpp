@@ -45,3 +45,29 @@ void DynamicShape::integrate() {
     torque = torque * 0.975;   // 0.975 mimics a good drift
 
 }
+
+void DynamicShape::moveForward() {
+    applyForce(heading() * 1.5 * 20);
+}
+
+void DynamicShape::moveBackward() {
+    applyForce(-heading() * 1.5 * 20);
+}
+
+void DynamicShape::turnRight() {
+    //angle += 5;
+    applyTorque(-1.7f);
+}
+
+void DynamicShape::turnLeft() {
+    //angle -= 5;
+    applyTorque(1.7f);
+}
+
+void DynamicShape::moveUp() {
+    applyForce(-downHeading() * 20);
+}
+
+void DynamicShape::moveDown() {
+    applyForce(downHeading() * 50);
+}
