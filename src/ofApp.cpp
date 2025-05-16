@@ -16,9 +16,9 @@ void ofApp::setup(){
 	bLanderLoaded = false;
 	bTerrainSelected = true;
 //	ofSetWindowShape(1024, 768);
-	//cam.setDistance(10);
-	//cam.setNearClip(.1);
-	//cam.setFov(65.5);   // approx equivalent to 28mm in 35mm format
+	cam.setDistance(10);
+	cam.setNearClip(.1);
+	cam.setFov(65.5);   // approx equivalent to 28mm in 35mm format
 	ofSetVerticalSync(true);
 	//cam.disableMouseInput();
 	ofEnableSmoothing();
@@ -71,21 +71,21 @@ void ofApp::setup(){
 	//testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
 
-	vector<Octree> octrees; 
-	octrees.clear();
-	for (int i = 2; i <= 6; i++) {
-		if (i < mars.getMeshCount()) {
-			ofMesh mesh = mars.getMesh(i);
-			Octree newOctree;
-			newOctree.create(mesh, 20);  // build octree for this mesh
-			octrees.push_back(newOctree);
+	//vector<Octree> octrees; 
+	//octrees.clear();
+	//for (int i = 2; i <= 6; i++) {
+	//	if (i < mars.getMeshCount()) {
+	//		ofMesh mesh = mars.getMesh(i);
+	//		Octree newOctree;
+	//		newOctree.create(mesh, 20);  // build octree for this mesh
+	//		octrees.push_back(newOctree);
 
-			//cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
-		}
-		else {
-			//cout << "Mesh index " << i << " out of range." << endl;
-		}
-	}
+	//		//cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
+	//	}
+	//	else {
+	//		//cout << "Mesh index " << i << " out of range." << endl;
+	//	}
+	//}
 
 
 	if (lander.loadModel("geo/shipTest5.obj")) {
@@ -119,6 +119,12 @@ void ofApp::setup(){
 	farCam.setPosition(-715, 80, -800);
 	farCam.setNearClip(.1);
 
+	glm::vec3 offset(80, 40, 100);  // (x: right, y: above, z: behind)
+	glm::vec3 camPos = spaceShip.position + offset;
+
+	cam.setPosition(camPos);
+	cam.lookAt(spaceShip.position);
+
 	theCam = &cam;
 
 	backgroundImg.load("images/Starry_Sky.png"); 
@@ -132,6 +138,18 @@ void ofApp::update() {
 	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
 	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z - 6);
 	farCam.lookAt(spaceShip.position);
+
+	// Fuel
+	if (isThrusting && currentFuel > 0) {
+		float dt = 1.0f / ofGetFrameRate();  // time per frame
+		currentFuel -= dt;
+
+		if (currentFuel <= 0) {
+			currentFuel = 0;
+			// Optionally disable thrusting
+			isThrusting = false;
+		}
+	}
 
 	if (colBoxList.size() >= 10) {
 		collided = true;
@@ -160,7 +178,9 @@ void ofApp::update() {
 	if (bLanderLoaded) {
 		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
 		lander.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
-		spaceShip.forces += glm::vec3(0, gravity, 0);
+		if (!collided) {
+			spaceShip.forces += glm::vec3(0, gravity, 0);
+		}
 		spaceShip.integrate();
 	}
 
@@ -201,11 +221,16 @@ void ofApp::update() {
 			//topCam.rotate(0.5, 0, 1, 0);
 		}
 	}
-	if (keymap[' ']) {
-		if (bLanderLoaded) {
-			spaceShip.moveUp();
+
+	if (currentFuel > 0) {
+		if (keymap[' ']) {
+			if (bLanderLoaded) {
+				spaceShip.moveUp();
+				isThrusting = true;
+			}
 		}
 	}
+	
 	if (keymap['X'] || keymap['x']) {
 		if (bLanderLoaded) {
 			spaceShip.moveDown();
@@ -278,6 +303,7 @@ void ofApp::draw() {
 	//ofBackground(ofColor::black);
 	ofDisableDepthTest();
 	backgroundImg.draw(0, 0, ofGetWidth(), ofGetHeight());
+	ofDrawBitmapStringHighlight("Fuel Remaining: " + ofToString(currentFuel, 1) + " s", 10, 20);
 	ofEnableDepthTest(); 
 
 
@@ -541,9 +567,12 @@ void ofApp::keyReleased(int key) {
 	}
 
 	if (!keymap[OF_KEY_UP] || !keymap['W'] || !keymap['w']) {
-		isThrusting = false;
+		//isThrusting = false;
 	}
 	if (!keymap[OF_KEY_DOWN] || !keymap['S'] || !keymap['s']) {
+		//isThrusting = false;
+	}
+	if (!keymap[' ']) {
 		isThrusting = false;
 	}
 

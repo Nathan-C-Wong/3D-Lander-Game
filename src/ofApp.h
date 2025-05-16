@@ -49,7 +49,7 @@ class ofApp : public ofBaseApp{
 		ofCamera onboardCam;
 		ofCamera farCam;
 
-		ofxAssimpModelLoader mars, lander, platform1, platform2, platform3;
+		ofxAssimpModelLoader mars, lander, platform1, platform2, platform3, platform4;
 		ofLight light;
 		Box boundingBox, landerBounds;
 		Box testBox;
@@ -104,7 +104,6 @@ class ofApp : public ofBaseApp{
 		bool movingBackward;
 		bool movingLeft;
 		bool movingRight;
-		bool isThrusting;
 
 		// Fonts
 		ofTrueTypeFont altitudeFont;
@@ -120,4 +119,10 @@ class ofApp : public ofBaseApp{
 		bool onGround = false;                // flag for when lander is touching terrain
 		bool crashDetected = false;
 		float maxSafeFallSpeed = 3.0f;
+
+		// Fuel
+		float maxFuel = 120.0f;       // 120 seconds of thrust
+		float currentFuel = 120.0f;   
+		bool isThrusting = false;
+
 };
