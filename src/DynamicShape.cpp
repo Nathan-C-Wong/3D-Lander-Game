@@ -46,6 +46,7 @@ void DynamicShape::integrate() {
 
 }
 
+
 void DynamicShape::moveForward() {
     applyForce(heading() * 1.5 * 50);
 }

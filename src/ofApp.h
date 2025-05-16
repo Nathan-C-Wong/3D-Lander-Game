@@ -112,4 +112,12 @@ class ofApp : public ofBaseApp{
 		// background
 		ofImage backgroundImg;
 
+		// Attributes
+		glm::vec3 velocity = glm::vec3(0);     // ship's velocity
+		glm::vec3 acceleration = glm::vec3(0); // force applied (gravity, thrust)
+		float gravity = -5.0f;                 // downward gravity force (adjust this)
+		float maxFallSpeed = -5.0f;            // max downward speed (terminal velocity)
+		bool onGround = false;                // flag for when lander is touching terrain
+		bool crashDetected = false;
+		float maxSafeFallSpeed = 3.0f;
 };

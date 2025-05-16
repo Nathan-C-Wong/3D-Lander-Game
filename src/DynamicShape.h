@@ -16,6 +16,7 @@ public:
     void turnLeft();
     void moveUp();
     void moveDown();
+    void gravity();
 
     glm::vec3 velocity;
     glm::vec3 acceleration;

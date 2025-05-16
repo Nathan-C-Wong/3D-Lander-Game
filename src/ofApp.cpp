@@ -35,7 +35,9 @@ void ofApp::setup(){
 	//
 	//gui.setup();
 	//gui.add(numLevels.setup("Number of Octree Levels", 1, 1, 10));
-	bDisplayOctree = false;
+	
+	//Set this to false later
+	//bDisplayOctree = false;
 
 	// Font
 	altitudeFont.load("fonts/Play-Regular.ttf", 16); 
@@ -64,7 +66,7 @@ void ofApp::setup(){
 	buildTreeTime = endTime - startTime;
 	cout << "Octree build time: " << buildTreeTime << " ms" << endl;
 
-	cout << "Number of Verts: " << mars.getMesh(0).getNumVertices() << endl;
+	//cout << "Number of Verts: " << mars.getMesh(0).getNumVertices() << endl;
 
 	//testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
 
@@ -78,10 +80,10 @@ void ofApp::setup(){
 			newOctree.create(mesh, 20);  // build octree for this mesh
 			octrees.push_back(newOctree);
 
-			cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
+			//cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
 		}
 		else {
-			cout << "Mesh index " << i << " out of range." << endl;
+			//cout << "Mesh index " << i << " out of range." << endl;
 		}
 	}
 
@@ -89,10 +91,10 @@ void ofApp::setup(){
 	if (lander.loadModel("geo/shipTest5.obj")) {
 		bLanderLoaded = true;
 		lander.setScaleNormalization(false);
-		lander.setPosition(0, 200, 0);
+		lander.setPosition(0, 500, 0);
 
 		// scale
-		float scale = 0.05f;
+		float scale = 0.01f;
 		lander.setScale(scale, scale, scale);
 
 		bboxList.clear();
@@ -111,7 +113,7 @@ void ofApp::setup(){
 	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
 	topCam.setNearClip(.1);
 	onboardCam.lookAt(glm::vec3(0, 0, -1));
-	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z - 6);
+	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
 	onboardCam.setFov(65);
 	farCam.lookAt(glm::vec3(0, -1, 0));
 	farCam.setPosition(-715, 80, -800);
@@ -140,17 +142,39 @@ void ofApp::update() {
 
 	if (collided) {
 		cout << "Collided " << intersectAmt++ << endl;
+		resolvingCollision = true;
 	}
 
 	if (resolvingCollision) {
 		collisionResolution();
 	}
 
+	/*if (altitude < 4) {
+		cout << "On ground" << endl;
+		onGround = true;
+	}
+	else {
+		onGround = false;
+	}*/
+
 	if (bLanderLoaded) {
 		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
 		lander.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
+		spaceShip.forces += glm::vec3(0, gravity, 0);
 		spaceShip.integrate();
 	}
+
+	
+
+	// After velocity update:
+	if ((velocity.y < -maxSafeFallSpeed) && collided) {
+		// Maybe trigger a crash if landed
+		crashDetected = true;
+	}
+	if (crashDetected) {
+		cout << "You have crashed!" << endl;
+	}
+
 
 	// Keymap
 	if (keymap[OF_KEY_UP] || keymap['W'] || keymap['w']) {
@@ -571,7 +595,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 		ofVec3f max = lander.getSceneMax() + lander.getPosition();
 
 		Box bounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
-		bool hit = bounds.intersect(Ray(Vector3(origin.x, origin.y, origin.z), Vector3(mouseDir.x, mouseDir.y, mouseDir.z)), 0, 10000);
+		bool hit = landerBounds.intersect(Ray(Vector3(origin.x, origin.y, origin.z), Vector3(mouseDir.x, mouseDir.y, mouseDir.z)), 0, 10000);
 		if (hit) {
 			bLanderSelected = true;
 			mouseDownPos = getMousePointOnPlane(lander.getPosition(), cam.getZAxis());
@@ -614,7 +638,7 @@ void ofApp::mouseDragged(int x, int y, int button) {
 	//
 	if (cam.getMouseInputEnabled()) return;
 
-	if (false){//bInDrag) {
+	if (bInDrag) {
 
 		glm::vec3 landerPos = lander.getPosition();
 
@@ -632,7 +656,7 @@ void ofApp::mouseDragged(int x, int y, int button) {
 		Box bounds = Box(Vector3(min.x, min.y, min.z), Vector3(max.x, max.y, max.z));
 
 		colBoxList.clear();
-		octree.intersect(bounds, octree.root, colBoxList);
+		octree.intersect(landerBounds, octree.root, colBoxList);
 	}
 	else {
 		ofVec3f p;
@@ -862,7 +886,7 @@ void ofApp::initThreeLighting() {
 
 	keyLight.rotate(45, ofVec3f(0, 1, 0));
 	keyLight.rotate(-45, ofVec3f(1, 0, 0));
-	keyLight.setPosition(5, 5, 5);
+	keyLight.setPosition(500, 5, 500);
 
 	fillLight.setup();
 	fillLight.enable();
@@ -875,7 +899,7 @@ void ofApp::initThreeLighting() {
 	fillLight.setSpecularColor(ofFloatColor(1, 1, 1));
 	fillLight.rotate(-10, ofVec3f(1, 0, 0));
 	fillLight.rotate(-45, ofVec3f(0, 1, 0));
-	fillLight.setPosition(-5, 5, 5);
+	fillLight.setPosition(-500, 5, 500);
 
 	rimLight.setup();
 	rimLight.enable();
@@ -887,7 +911,7 @@ void ofApp::initThreeLighting() {
 	rimLight.setDiffuseColor(ofFloatColor(1, 1, 1));
 	rimLight.setSpecularColor(ofFloatColor(1, 1, 1));
 	rimLight.rotate(180, ofVec3f(0, 1, 0));
-	rimLight.setPosition(0, 5, -7);
+	rimLight.setPosition(0, 150, -7);
 }
 
 void ofApp::updateLanderBounds() {
