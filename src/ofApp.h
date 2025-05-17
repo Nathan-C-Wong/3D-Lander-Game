@@ -31,6 +31,7 @@ class ofApp : public ofBaseApp{
 			bGameOver = false;
 			lander.setScale(0.01, 0.01, 0.01);
 			spaceShip.velocity = glm::vec3(0, 0, 0);
+			score = 0;
 		}
 
 		void keyPressed(int key);
