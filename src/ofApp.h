@@ -15,6 +15,24 @@ class ofApp : public ofBaseApp{
 		void update();
 		void draw();
 
+		void ofApp::restartGame() {
+			theCam = &cam;
+			collided = false;
+			resolvingCollision = false;
+			onGround = false;
+			wasOnGround = false;
+			crashDetected = false;
+			currentFuel = 120.0f;
+			isThrusting = false;
+			explosionTriggered = false;
+			lander.setPosition(0, 500, -250);
+			spaceShip.position = glm::vec3(0, 500, -250);
+			colBoxList.clear();
+			bGameOver = false;
+			lander.setScale(0.01, 0.01, 0.01);
+			spaceShip.velocity = glm::vec3(0, 0, 0);
+		}
+
 		void keyPressed(int key);
 		void keyReleased(int key);
 		void mouseMoved(int x, int y );
@@ -114,6 +132,7 @@ class ofApp : public ofBaseApp{
 
 		// Fonts
 		ofTrueTypeFont altitudeFont;
+		ofTrueTypeFont gameOverFont;
 
 		// Sound
 		ofSoundPlayer explosionSound;
@@ -154,4 +173,7 @@ class ofApp : public ofBaseApp{
 		glm::vec3 landingAreaCenter2 = glm::vec3(190, 40, -100); //190
 		glm::vec3 landingAreaCenter3 = glm::vec3(-190, 40, 190);
 		glm::vec3 landingAreaCenter4 = glm::vec3(50, 160, 100);
+
+		// Game state
+		bool bGameOver = false;
 };

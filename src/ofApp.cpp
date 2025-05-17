@@ -90,7 +90,8 @@ void ofApp::setup(){
 		float scale = 0.01f;
 		lander.setScale(scale, scale, scale);
 
-		lander.setRotation(0, 100, 0, 1, 0);
+		//lander.setRotation(0, 180, 0, 1, 0);
+		//spaceShip.angle += 180;
 
 		bboxList.clear();
 		for (int i = 0; i < lander.getMeshCount(); i++) {
@@ -138,6 +139,10 @@ void ofApp::update() {
 	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
 	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z - 6);
 	farCam.lookAt(spaceShip.position);
+	
+	if (bGameOver) {
+		spaceShip.velocity = glm::vec3(0, 0, 0);
+	}
 
 	// Fuel
 	if (isThrusting && currentFuel > 0) {
@@ -182,7 +187,7 @@ void ofApp::update() {
 		collided = false;
 	}
 
-	if ((collided || onGround) && !crashDetected && !safe) {
+	/*if ((collided || onGround) && !crashDetected && !safe) {
 		if (spaceShip.velocity.y < -maxSafeFallSpeed) {
 			crashDetected = true;
 			cout << "You have crashed!" << endl;
@@ -191,7 +196,7 @@ void ofApp::update() {
 			safe = true;
 			cout << "Safe landing!" << endl;
 		}
-	}
+	}*/
 
 	if (collided) {
 		//cout << "Collided " << intersectAmt++ << endl;
@@ -203,7 +208,6 @@ void ofApp::update() {
 		explosionTriggered = true;
 		explosionSystem.setPosition(spaceShip.position);
 		explosionSystem.start();
-		explosionSound.play();
 		lander.setScale(0, 0, 0); // hide lander
 	}
 
@@ -221,12 +225,17 @@ void ofApp::update() {
 		bool bLanderLandedSafely = insideAnyLandingZone && landedSoftly;
 
 		if (bLanderLandedSafely) {
-			cout << "Safe landing in one of the zones!" << endl;
-			score += 1000;
+			//cout << "Safe landing in one of the zones!" << endl;
+			score = 1000;  // max score
 			spaceShip.velocity = glm::vec3(0, 0, 0);
+			bGameOver = true;
 		}
 		else {
-			cout << "Landing failed!" << endl;
+			//cout << "Landing failed!" << endl;
+			crashDetected = true;
+			explosionSound.play();
+			lander.setScale(0, 0, 0);
+			bGameOver = true;
 		}
 
 		// Stop movement after collision
@@ -281,8 +290,6 @@ void ofApp::update() {
 	if (!wasOnGround && (onGround || collided) && !crashDetected) {
 		wasOnGround = true;
 		safe = true;
-
-		score += 100;
 	}
 
 	/*if (onGround) {
@@ -391,7 +398,6 @@ void ofApp::draw() {
 	ofDisableDepthTest();
 	backgroundImg.draw(0, 0, ofGetWidth(), ofGetHeight());
 	ofEnableDepthTest();
-	
 
 	//glDepthMask(false);
 	//if (!bHide) gui.draw();
@@ -486,42 +492,7 @@ void ofApp::draw() {
 		}
 	}
 
-	//vector<ofColor> levelColors = {
-	//	ofColor::red,
-	//	ofColor::green,
-	//	ofColor::blue,
-	//	ofColor::yellow,
-	//	ofColor::cyan,
-	//	ofColor::magenta
-	//};
-	//ofNoFill();
-	//// Draw each octree 
-	//for (int i = 0; i < octrees.size(); i++) {
-	//	octrees[i].draw(octrees[i].root, 4, 0, levelColors);
-	//}
-
-
-	//ofEnableLighting();
-	//for (int i = 0; i < platforms.size(); i++) {
-	//	ofPushMatrix();
-	//	
-	//	ofTranslate(0, 0, i * 50);
-
-	//	// Assign different colors per platform
-	//	switch (i) {
-	//	case 0: ofSetColor(ofColor::red); break;
-	//	case 1: ofSetColor(ofColor::green); break;
-	//	case 2: ofSetColor(ofColor::blue); break;
-	//	case 3: ofSetColor(ofColor::yellow); break;
-	//	case 4: ofSetColor(ofColor::magenta); break;
-	//	default: ofSetColor(ofColor::white);
-	//	}
-
-	//	platforms[i].drawFaces();
-	//	ofPopMatrix();
-	//}
-
-	if (bDisplayPoints) {                // display points as an option 
+	if (bDisplayPoints) {               
 		glPointSize(3);
 		//ofSetColor(ofColor::green);
 		mars.drawVertices();
@@ -580,12 +551,47 @@ void ofApp::draw() {
 	string scoreText = "Score: " + std::to_string(score);
 	ofDrawBitmapStringHighlight(scoreText, ofGetWidth() / 2 - 40, 20);  // Top middle 
 
-	string controlsText = "WASD for Movement\nX to go down\nSpace to go up\nF1-F5 for cameras";
+	string controlsText = "WASD for Movement\nX to go down\nSpace to go up\nF1-F5 for cameras\n r to reset game";
 	// [Controls\ Bottom-left corner
 	float x_con = 20; 
 	float y_con = ofGetHeight() - 60;  
 	ofSetColor(255);  // white color
 	ofDrawBitmapString(controlsText, x_con, y_con);
+
+	if (bGameOver) {
+		ofDisableDepthTest();
+		gameOverFont.load("fonts/Play-Bold.ttf", 32);
+
+		// Dim background
+		ofFill();
+		ofSetColor(0, 0, 0, 150);
+		ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
+		ofNoFill();
+
+		// Set lines
+		std::string line1 = "Game Over";
+		std::string line2 = "Score: " + std::to_string(score);
+		std::string line3 = "Press 'r' to Restart";
+
+		// Get bounding boxes
+		ofRectangle bounds1 = gameOverFont.getStringBoundingBox(line1, 0, 0);
+		ofRectangle bounds2 = gameOverFont.getStringBoundingBox(line2, 0, 0);
+		ofRectangle bounds3 = gameOverFont.getStringBoundingBox(line3, 0, 0);
+
+		// Calculate vertical positions
+		float centerY = ofGetHeight() / 2;
+		float spacing = 15;
+		float totalHeight = bounds1.getHeight() + bounds2.getHeight() + bounds3.getHeight() + spacing * 2;
+
+		float yStart = centerY - totalHeight / 2;
+
+		// Draw lines centered
+		ofSetColor(ofColor::white);
+		gameOverFont.drawString(line1, ofGetWidth() / 2 - bounds1.getWidth() / 2, yStart + bounds1.getHeight());
+		gameOverFont.drawString(line2, ofGetWidth() / 2 - bounds2.getWidth() / 2, yStart + bounds1.getHeight() + spacing + bounds2.getHeight());
+		gameOverFont.drawString(line3, ofGetWidth() / 2 - bounds3.getWidth() / 2, yStart + bounds1.getHeight() + bounds2.getHeight() + spacing * 2 + bounds3.getHeight());
+	}
+
 
 }
 
@@ -648,8 +654,9 @@ void ofApp::keyPressed(int key) {
 	case 'o':
 		bDisplayOctree = !bDisplayOctree;
 		break;
+	case 'R':
 	case 'r':
-		cam.reset();
+		restartGame();
 		break;
 	case '=':
 		savePicture();
@@ -1154,3 +1161,4 @@ bool ofApp::isSoftLanding(const glm::vec3& velocity, float maxLandingSpeed) {
 	// For soft landing, vertical speed should be less than maxLandingSpeed
 	return glm::abs(velocity.y) <= maxLandingSpeed;
 }
+
