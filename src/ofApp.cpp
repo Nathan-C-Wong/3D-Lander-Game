@@ -25,8 +25,8 @@ void ofApp::setup(){
 	ofEnableDepthTest();
 
 	// lighting 
-	initLightingAndMaterials();
-	//initThreeLighting();
+	//initLightingAndMaterials();
+	initThreeLighting();
 
 	mars.loadModel("geo/finalTerrain.obj");
 	mars.setScaleNormalization(false);
@@ -80,18 +80,29 @@ void ofApp::setup(){
 
 	octrees.clear();
 	float scaleFactor = 200.0f;
+
 	for (int i = 2; i <= 6; i++) {
 		if (i < mars.getMeshCount()) {
 			ofMesh mesh = mars.getMesh(i);
 
+			// Compute center before scaling
+			ofVec3f center(0, 0, 0);
+			for (int v = 0; v < mesh.getNumVertices(); v++) {
+				center += mesh.getVertex(v);
+			}
+			center /= mesh.getNumVertices();
+
+			// Scale mesh around center
 			for (int v = 0; v < mesh.getNumVertices(); v++) {
 				ofVec3f vert = mesh.getVertex(v);
+				vert -= center;
 				vert *= scaleFactor;
+				vert += center;
 				mesh.setVertex(v, vert);
 			}
 
 			Octree newOctree;
-			newOctree.create(mesh, 20);  // build octree for this mesh
+			newOctree.create(mesh, 20);
 			octrees.push_back(newOctree);
 
 			cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
@@ -100,6 +111,7 @@ void ofApp::setup(){
 			cout << "Mesh index " << i << " out of range." << endl;
 		}
 	}
+
 
 	if (lander.loadModel("geo/shipTest5.obj")) {
 		bLanderLoaded = true;
@@ -198,7 +210,7 @@ void ofApp::update() {
 		collided = false;
 	}
 
-	if ((collided || onGround) && !crashDetected && altitude <= 5) {
+	if ((collided || onGround) && !crashDetected) {
 		if (spaceShip.velocity.y < -maxSafeFallSpeed) {
 			crashDetected = true;
 			cout << "You have crashed!" << endl;
@@ -262,9 +274,9 @@ void ofApp::update() {
 	}
 
 	if (!wasOnGround && (onGround || collided) && !crashDetected) {
-		float landingImpulse = glm::clamp(-spaceShip.velocity.y * 0.5f, 0.0f, 10.0f);
-		spaceShip.applyLandingImpulse(landingImpulse);
-		cout << "Soft landing! Impulse applied: " << landingImpulse << endl;
+		//float landingImpulse = glm::clamp(-spaceShip.velocity.y * 0.5f, 0.0f, 10.0f);
+		//spaceShip.applyLandingImpulse(landingImpulse);
+		//cout << "Soft landing! Impulse applied: " << landingImpulse << endl;
 		wasOnGround = true;
 		safe = true;
 
@@ -1041,40 +1053,38 @@ void ofApp::collisionResolution() {
 void ofApp::initThreeLighting() {
 	keyLight.setup();
 	keyLight.enable();
-	keyLight.setAreaLight(1, 1);
-	keyLight.setAmbientColor(ofFloatColor(0.1, 0.1, 0.1));
-	keyLight.setDiffuseColor(ofFloatColor(1, 1, 1));
-	keyLight.setSpecularColor(ofFloatColor(1, 1, 1));
-
-	keyLight.rotate(45, ofVec3f(0, 1, 0));
-	keyLight.rotate(-45, ofVec3f(1, 0, 0));
-	keyLight.setPosition(500, 5, 500);
+	keyLight.setDirectional();
+	keyLight.setAmbientColor(ofFloatColor(0.05, 0.05, 0.05));
+	keyLight.setDiffuseColor(ofFloatColor(1.0, 0.95, 0.9));
+	keyLight.setSpecularColor(ofFloatColor(1.0, 1.0, 1.0));
+	keyLight.setOrientation(ofVec3f(45, -60, 0));
 
 	fillLight.setup();
 	fillLight.enable();
 	fillLight.setSpotlight();
-	fillLight.setScale(.05);
-	fillLight.setSpotlightCutOff(15);
-	fillLight.setAttenuation(2, .001, .001);
-	fillLight.setAmbientColor(ofFloatColor(0.1, 0.1, 0.1));
-	fillLight.setDiffuseColor(ofFloatColor(1, 1, 1));
-	fillLight.setSpecularColor(ofFloatColor(1, 1, 1));
-	fillLight.rotate(-10, ofVec3f(1, 0, 0));
-	fillLight.rotate(-45, ofVec3f(0, 1, 0));
-	fillLight.setPosition(-500, 5, 500);
+	fillLight.setScale(0.1);
+	fillLight.setSpotlightCutOff(35);
+	fillLight.setAttenuation(1.5, 0.002, 0.001);
+	fillLight.setAmbientColor(ofFloatColor(0.05, 0.05, 0.05));
+	fillLight.setDiffuseColor(ofFloatColor(0.7, 0.8, 1.0));
+	fillLight.setSpecularColor(ofFloatColor(1.0, 1.0, 1.0));
+	fillLight.setOrientation(ofVec3f(20, 45, 0));
+	fillLight.setPosition(-400, 300, 400);
 
 	rimLight.setup();
 	rimLight.enable();
 	rimLight.setSpotlight();
-	rimLight.setScale(.05);
-	rimLight.setSpotlightCutOff(30);
-	rimLight.setAttenuation(.2, .001, .001);
-	rimLight.setAmbientColor(ofFloatColor(0.1, 0.1, 0.1));
-	rimLight.setDiffuseColor(ofFloatColor(1, 1, 1));
-	rimLight.setSpecularColor(ofFloatColor(1, 1, 1));
-	rimLight.rotate(180, ofVec3f(0, 1, 0));
-	rimLight.setPosition(0, 150, -7);
+	rimLight.setScale(0.1);
+	rimLight.setSpotlightCutOff(40);
+	rimLight.setAttenuation(1.0, 0.002, 0.001);
+	rimLight.setAmbientColor(ofFloatColor(0.05, 0.05, 0.05));
+	rimLight.setDiffuseColor(ofFloatColor(1.0, 1.0, 1.0));
+	rimLight.setSpecularColor(ofFloatColor(1.0, 1.0, 1.0));
+	rimLight.setOrientation(ofVec3f(-45, 180, 0));
+	rimLight.setPosition(0, 250, -500);
 }
+
+
 
 void ofApp::updateLanderBounds() {
 	ofVec3f rawMin = lander.getSceneMin();
