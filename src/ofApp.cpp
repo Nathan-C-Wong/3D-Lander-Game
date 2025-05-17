@@ -198,13 +198,15 @@ void ofApp::update() {
 		collided = false;
 	}
 
-	// After velocity update:
-	if ((spaceShip.velocity.y < -maxSafeFallSpeed) && (collided || onGround)) {
-		// Maybe trigger a crash if landed
-		crashDetected = true;
-	}
-	if (crashDetected) {
-		cout << "You have crashed!" << endl;
+	if ((collided || onGround) && !crashDetected && altitude <= 5) {
+		if (spaceShip.velocity.y < -maxSafeFallSpeed) {
+			crashDetected = true;
+			cout << "You have crashed!" << endl;
+		}
+		else {
+			safe = true;
+			cout << "Safe landing!" << endl;
+		}
 	}
 
 	if (collided) {
@@ -213,7 +215,7 @@ void ofApp::update() {
 	}
 
 	// Boom
-	if (crashDetected && !explosionTriggered) {
+	if (crashDetected && !explosionTriggered && !safe) {
 		explosionTriggered = true;
 		explosionSystem.setPosition(spaceShip.position);
 		explosionSystem.start();
@@ -259,9 +261,19 @@ void ofApp::update() {
 		collisionResolution();
 	}
 
-	if (onGround) {
-		spaceShip.velocity.y = 0;
+	if (!wasOnGround && (onGround || collided) && !crashDetected) {
+		float landingImpulse = glm::clamp(-spaceShip.velocity.y * 0.5f, 0.0f, 10.0f);
+		spaceShip.applyLandingImpulse(landingImpulse);
+		cout << "Soft landing! Impulse applied: " << landingImpulse << endl;
+		wasOnGround = true;
+		safe = true;
+
+		score += 100;
 	}
+
+	/*if (onGround) {
+		spaceShip.velocity.y = 0;
+	}*/
 
 	if (explosionTriggered) {
 		spaceShip.velocity.y = 0;
@@ -543,6 +555,9 @@ void ofApp::draw() {
 	else {
 		altitudeFont.drawString("Altitude: Danger!", x, y);
 	}
+
+	string scoreText = "Score: " + std::to_string(score);
+	ofDrawBitmapStringHighlight(scoreText, ofGetWidth() / 2 - 40, 20);  // Top middle 
 
 }
 

@@ -72,3 +72,7 @@ void DynamicShape::moveUp() {
 void DynamicShape::moveDown() {
     applyForce(downHeading() * 50);
 }
+
+void DynamicShape::applyLandingImpulse(float impulseStrength) {
+    velocity.y = -impulseStrength;
+}

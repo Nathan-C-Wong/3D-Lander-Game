@@ -127,6 +127,8 @@ class ofApp : public ofBaseApp{
 		bool crashDetected = false;
 		float maxSafeFallSpeed = 15.0f;
 		float speedIterator = 0;
+		bool wasOnGround = false;
+
 
 		// Fuel
 		float maxFuel = 120.0f;       // 120 seconds of thrust
@@ -138,4 +140,7 @@ class ofApp : public ofBaseApp{
 		ParticleSystem thrustParticles;
 
 		bool explosionTriggered = false;
+		bool safe = false;
+
+		int score = 0;
 };

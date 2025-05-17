@@ -18,7 +18,7 @@ public:
         particles.clear();
         if (continuous) {
             for (int i = 0; i < numParticles; ++i) {
-                ofVec3f vel = ofVec3f(ofRandom(-0.5, 0.5), ofRandom(-5, -8), ofRandom(-0.5, 0.5));
+                ofVec3f vel = ofVec3f(ofRandom(-0.5, 0.5), ofRandom(-10, -20), ofRandom(-0.5, 0.5));
                 ofColor color = ofColor::orangeRed;
                 float lifespan = ofRandom(1.5, 2.5);
                 particles.emplace_back(emitterPos, vel, color, lifespan);

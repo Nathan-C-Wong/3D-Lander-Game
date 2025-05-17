@@ -17,6 +17,7 @@ public:
     void moveUp();
     void moveDown();
     void gravity();
+    void applyLandingImpulse(float impulseStrength = 5.0f);
 
     glm::vec3 velocity;
     glm::vec3 acceleration;
