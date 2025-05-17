@@ -28,6 +28,7 @@ void ofApp::setup(){
 	//initLightingAndMaterials();
 	initThreeLighting();
 
+	//mars.loadModel("geo/platformsPlusTerrain.obj");
 	mars.loadModel("geo/finalTerrain.obj");
 	mars.setScaleNormalization(false);
 
@@ -44,6 +45,10 @@ void ofApp::setup(){
 
 	// Sound
 	explosionSound.load("sounds/projectile_explosion.mp3");
+	thrustSound.load("sounds/rocket_thruster.wav");
+	thrustSound.setVolume(0.90f);
+	thrustSound.setMultiPlay(false);
+	thrustSound.setLoop(false);
 
 	bHide = false;
 	
@@ -72,55 +77,20 @@ void ofApp::setup(){
 
 
 	buildTreeTime = endTime - startTime;
-	cout << "Octree build time: " << buildTreeTime << " ms" << endl;
+	//cout << "Octree build time: " << buildTreeTime << " ms" << endl;
 
 	//cout << "Number of Verts: " << mars.getMesh(0).getNumVertices() << endl;
-
-	//testBox = Box(Vector3(3, 3, 0), Vector3(5, 5, 2));
-
-	octrees.clear();
-	float scaleFactor = 200.0f;
-
-	for (int i = 2; i <= 6; i++) {
-		if (i < mars.getMeshCount()) {
-			ofMesh mesh = mars.getMesh(i);
-
-			// Compute center before scaling
-			ofVec3f center(0, 0, 0);
-			for (int v = 0; v < mesh.getNumVertices(); v++) {
-				center += mesh.getVertex(v);
-			}
-			center /= mesh.getNumVertices();
-
-			// Scale mesh around center
-			for (int v = 0; v < mesh.getNumVertices(); v++) {
-				ofVec3f vert = mesh.getVertex(v);
-				vert -= center;
-				vert *= scaleFactor;
-				vert += center;
-				mesh.setVertex(v, vert);
-			}
-
-			Octree newOctree;
-			newOctree.create(mesh, 20);
-			octrees.push_back(newOctree);
-
-			cout << "Built octree for mesh " << i << " with " << mesh.getNumVertices() << " vertices." << endl;
-		}
-		else {
-			cout << "Mesh index " << i << " out of range." << endl;
-		}
-	}
-
 
 	if (lander.loadModel("geo/shipTest5.obj")) {
 		bLanderLoaded = true;
 		lander.setScaleNormalization(false);
-		lander.setPosition(0, 500, 0);
+		lander.setPosition(0, 500, -250);
 
 		// scale
 		float scale = 0.01f;
 		lander.setScale(scale, scale, scale);
+
+		lander.setRotation(0, 100, 0, 1, 0);
 
 		bboxList.clear();
 		for (int i = 0; i < lander.getMeshCount(); i++) {
@@ -137,7 +107,7 @@ void ofApp::setup(){
 	topCam.lookAt(glm::vec3(0, -1, 0));
 	topCam.setPosition(spaceShip.position.x, spaceShip.position.y + 70, spaceShip.position.z);
 	topCam.setNearClip(.1);
-	onboardCam.lookAt(glm::vec3(0, 0, -1));
+	onboardCam.lookAt(glm::vec3(0, 0, -3));
 	onboardCam.setPosition(spaceShip.position.x, spaceShip.position.y, spaceShip.position.z);
 	onboardCam.setFov(65);
 	farCam.lookAt(glm::vec3(0, -1, 0));
@@ -171,6 +141,7 @@ void ofApp::update() {
 
 	// Fuel
 	if (isThrusting && currentFuel > 0) {
+		thrustSound.play();
 		float dt = 1.0f / ofGetFrameRate();  // time per frame
 		currentFuel -= dt;
 
@@ -204,13 +175,14 @@ void ofApp::update() {
 
 
 	if (colBoxList.size() >= 10) {
+		onGround = true;
 		collided = true;
 	}
 	if (colBoxList.size() < 10) {
 		collided = false;
 	}
 
-	if ((collided || onGround) && !crashDetected) {
+	if ((collided || onGround) && !crashDetected && !safe) {
 		if (spaceShip.velocity.y < -maxSafeFallSpeed) {
 			crashDetected = true;
 			cout << "You have crashed!" << endl;
@@ -235,6 +207,35 @@ void ofApp::update() {
 		lander.setScale(0, 0, 0); // hide lander
 	}
 
+	// Landing
+	if (collided) {
+
+		bool landedInside1 = isInsideLandingSquare(spaceShip.position, landingAreaCenter1, landingSize);
+		bool landedInside2 = isInsideLandingSquare(spaceShip.position, landingAreaCenter2, landingSize);
+		bool landedInside3 = isInsideLandingSquare(spaceShip.position, landingAreaCenter3, landingSize);
+		bool landedInside4 = isInsideLandingSquare(spaceShip.position, landingAreaCenter4, landingSize);
+
+		bool insideAnyLandingZone = landedInside1 || landedInside2 || landedInside3 || landedInside4;
+		bool landedSoftly = isSoftLanding(spaceShip.velocity, maxSafeFallSpeed);
+
+		bool bLanderLandedSafely = insideAnyLandingZone && landedSoftly;
+
+		if (bLanderLandedSafely) {
+			cout << "Safe landing in one of the zones!" << endl;
+			score += 1000;
+			spaceShip.velocity = glm::vec3(0, 0, 0);
+		}
+		else {
+			cout << "Landing failed!" << endl;
+		}
+
+		// Stop movement after collision
+		spaceShip.velocity = glm::vec3(0);
+		spaceShip.acceleration = glm::vec3(0);
+	}
+
+
+
 	// Altitude Sensor
 	ofVec3f landerPos = lander.getPosition();
 	ofVec3f rayOrigin = landerPos;
@@ -253,12 +254,12 @@ void ofApp::update() {
 		//cout << "Altitude: " << altitude << endl;
 	}
 
-	if (altitude <= 5) {
+	/*if (altitude <= 5) {
 		onGround = true;
 	}
 	else {
 		onGround = false;
-	}
+	}*/
 
 	if (bLanderLoaded) {
 		lander.setRotation(0, spaceShip.angle, 0, 1, 0); //index, angle (degrees), x axis rotation, y axis rotation, z axis rotation
@@ -273,10 +274,11 @@ void ofApp::update() {
 		collisionResolution();
 	}
 
+	if ((onGround || collided) && !crashDetected) {
+		spaceShip.velocity.y = abs(spaceShip.velocity.y) * 0.8;
+	}
+
 	if (!wasOnGround && (onGround || collided) && !crashDetected) {
-		//float landingImpulse = glm::clamp(-spaceShip.velocity.y * 0.5f, 0.0f, 10.0f);
-		//spaceShip.applyLandingImpulse(landingImpulse);
-		//cout << "Soft landing! Impulse applied: " << landingImpulse << endl;
 		wasOnGround = true;
 		safe = true;
 
@@ -397,10 +399,17 @@ void ofApp::draw() {
 
 	theCam->begin();
 
-	//p1.draw();
-	//p2.draw();
-	//p3.draw();
-	//p4.draw();
+	// Platform 1
+	drawLandingSquare(landingAreaCenter1, landingSize, ofColor::blue);
+
+	// Platform 2
+	drawLandingSquare(landingAreaCenter2, landingSize, ofColor::green);
+
+	// Platform 3
+	drawLandingSquare(landingAreaCenter3, landingSize, ofColor::red);
+
+	// Platform 4
+	drawLandingSquare(landingAreaCenter4, landingSize, ofColor::orange);
 
 	explosionSystem.draw();
 	thrustParticles.draw();
@@ -541,9 +550,9 @@ void ofApp::draw() {
 	if (pointSelected) {
 		ofVec3f p = octree.mesh.getVertex(selectedNode.points[0]);
 		ofVec3f d = p - cam.getPosition();
-		//ofSetColor(ofColor::lightGreen);
-		//ofDrawSphere(p, .02 * d.length());
-		//cout << "Click Coordinate: " << p << endl;
+		ofSetColor(ofColor::lightGreen);
+		ofDrawSphere(p, .02 * d.length());
+		cout << "Click Coordinate: " << p << endl;
 	}
 
 	ofPopMatrix();
@@ -556,7 +565,7 @@ void ofApp::draw() {
 
 	// Draw altitude reading
 	ofSetColor(ofColor::white);
-	std::string altText = "Altitude: " + ofToString(altitude, 2) + " m";
+	std::string altText = "Altitude: " + ofToString(altitude, 2) + " feet";
 	float textWidth = altitudeFont.stringWidth(altText);
 	float textHeight = altitudeFont.stringHeight(altText);
 	float x = ofGetWidth() - textWidth - 20;
@@ -570,6 +579,13 @@ void ofApp::draw() {
 
 	string scoreText = "Score: " + std::to_string(score);
 	ofDrawBitmapStringHighlight(scoreText, ofGetWidth() / 2 - 40, 20);  // Top middle 
+
+	string controlsText = "WASD for Movement\nX to go down\nSpace to go up\nF1-F5 for cameras";
+	// [Controls\ Bottom-left corner
+	float x_con = 20; 
+	float y_con = ofGetHeight() - 60;  
+	ofSetColor(255);  // white color
+	ofDrawBitmapString(controlsText, x_con, y_con);
 
 }
 
@@ -1035,7 +1051,7 @@ void ofApp::collisionResolution() {
 	}
 
 	ofVec3f landPos = lander.getPosition();
-	spaceShip.position = glm::vec3(landPos.x, landPos.y + 0.1, landPos.z);
+	spaceShip.position = glm::vec3(landPos.x, landPos.y + 0.05, landPos.z);
 
 	colBoxList.clear();
 	ofVec3f min = lander.getSceneMin() + lander.getPosition();
@@ -1104,36 +1120,37 @@ void ofApp::updateLanderBounds() {
 		Vector3(newMax.x, newMax.y, newMax.z));
 }
 
-//bool ofApp::playerIntersectTerrain(DynamicShape& p, TreeNode& rootNode) {
-//	glm::vec3 halfSize = glm::vec3(p.playerBox.width, p.playerBox.height, p.playerBox.depth) * 0.5f;
-//	vector<glm::vec3> localCorners;
-//
-//	for (int x = -1; x <= 1; x += 2) {
-//		for (int y = -1; y <= 1; y += 2) {
-//			for (int z = -1; z <= 1; z += 2) {
-//				glm::vec3 corner = glm::vec3(x * halfSize.x, y * halfSize.y, z * halfSize.z);        //finding the 8 corners of player's box
-//				localCorners.push_back(corner);
-//			}
-//		}
-//	}
-//	glm::mat4 transform = p.playerBox.getTransform();
-//	vector<glm::vec3> worldCorners;
-//	for (int i = 0; i < localCorners.size(); i++) {
-//		glm::vec4 world = transform * glm::vec4(localCorners[i], 1.0);
-//		worldCorners.push_back(glm::vec3(world));                //getting 8 corners in world space
-//	}
-//	float minY = worldCorners[0].y;
-//	for (int i = 0; i < worldCorners.size(); i++) {
-//		minY = std::min(minY, worldCorners[i].y);
-//	}
-//	for (int i = 0; i < worldCorners.size(); i++) {
-//		if (abs(worldCorners[i].y - minY) < 0.01f) {  // tolerance on bottom corners
-//			TreeNode hitNode;
-//			if (octree.intersect(worldCorners[i], octree.root, hitNode)) {
-//				return true;
-//			}
-//		}
-//	}
-//
-//	return false;
-//}
+void ofApp::drawLandingSquare(const glm::vec3& center, float size, ofColor color) {
+	float halfSize = size / 2.0f;
+	float y = center.y;  // fixed height
+
+	glm::vec3 p1(center.x - halfSize, y, center.z - halfSize);
+	glm::vec3 p2(center.x + halfSize, y, center.z - halfSize);
+	glm::vec3 p3(center.x + halfSize, y, center.z + halfSize);
+	glm::vec3 p4(center.x - halfSize, y, center.z + halfSize);
+
+	//ofSetColor(ofColor::blue);
+	//ofNoFill();
+	ofFill();
+	ofSetColor(color);
+
+	ofDrawLine(p1, p2);
+	ofDrawLine(p2, p3);
+	ofDrawLine(p3, p4);
+	ofDrawLine(p4, p1);
+}
+
+bool ofApp::isInsideLandingSquare(const glm::vec3& shipPos, const glm::vec3& center, float size) {
+	float halfSize = size / 2.0f;
+
+	// Check if ship's x,z are within square bounds
+	bool insideX = (shipPos.x >= center.x - halfSize) && (shipPos.x <= center.x + halfSize);
+	bool insideZ = (shipPos.z >= center.z - halfSize) && (shipPos.z <= center.z + halfSize);
+
+	return insideX && insideZ;
+}
+
+bool ofApp::isSoftLanding(const glm::vec3& velocity, float maxLandingSpeed) {
+	// For soft landing, vertical speed should be less than maxLandingSpeed
+	return glm::abs(velocity.y) <= maxLandingSpeed;
+}

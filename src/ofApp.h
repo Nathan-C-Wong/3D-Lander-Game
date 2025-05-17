@@ -42,6 +42,9 @@ class ofApp : public ofBaseApp{
 		void updateLanderBounds();
 		Box transformBoundingBox(const ofMatrix4x4& mat, const ofVec3f& rawMin, const ofVec3f& rawMax);
 		bool playerIntersectTerrain(DynamicShape& p, TreeNode& rootNode);
+		void drawLandingSquare(const glm::vec3& center, float size, ofColor color);
+		bool ofApp::isInsideLandingSquare(const glm::vec3& shipPos, const glm::vec3& center, float size);
+		bool isSoftLanding(const glm::vec3& velocity, float maxLandingSpeed);
 
 		ofEasyCam cam;
 		ofCamera* theCam;
@@ -114,6 +117,7 @@ class ofApp : public ofBaseApp{
 
 		// Sound
 		ofSoundPlayer explosionSound;
+		ofSoundPlayer thrustSound;
 	
 		// background
 		ofImage backgroundImg;
@@ -143,4 +147,11 @@ class ofApp : public ofBaseApp{
 		bool safe = false;
 
 		int score = 0;
+
+		// Landing platforms
+		float landingSize = 60.0f;
+		glm::vec3 landingAreaCenter1 = glm::vec3(-190, 80, -190);
+		glm::vec3 landingAreaCenter2 = glm::vec3(190, 40, -100); //190
+		glm::vec3 landingAreaCenter3 = glm::vec3(-190, 40, 190);
+		glm::vec3 landingAreaCenter4 = glm::vec3(50, 160, 100);
 };
