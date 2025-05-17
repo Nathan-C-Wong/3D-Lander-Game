@@ -1,6 +1,9 @@
 #pragma once
 #include "ofMain.h"
 #include "Particle.h"
+/*
+*  Danilo Makarewycz and Nathan Wong
+*/
 
 class ParticleSystem {
 public:

@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "Shape.h"
 
+//Danilo Makarewycz and Nathan Wong
 class DynamicShape : public Shape {
 public:
     DynamicShape(); // Constructor

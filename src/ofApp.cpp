@@ -3,7 +3,11 @@
 
 //
 // Some setup code and functions reused from the starter code for 3D 
-// interaction Lab from Kevin M. Smith's SJSU CS134 Class
+// interaction Lab and spacial subdivision written by Kevin M. Smith for CS134 
+// 
+// 
+// The rest of the function code is written by Danilo Makarewycz and Nathan Wong
+// For the CS134 Final project
 //
 //--------------------------------------------------------------
 // setup scene, lighting, state and load geometry

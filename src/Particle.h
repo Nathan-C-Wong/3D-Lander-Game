@@ -1,6 +1,9 @@
 #pragma once
 #include "ofMain.h"
 
+/*
+* Danilo Makarewycz and Nathan Wong 
+*/
 class Particle {
 public:
     ofVec3f position;

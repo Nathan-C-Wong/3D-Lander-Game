@@ -2,6 +2,7 @@
 
 #include "ofMain.h"
 
+// Danilo Makarewycz and Nathan Wong
 class Shape {
 public:
     // methods

@@ -3,6 +3,9 @@
 #include "ofMain.h"
 #include  "ofxAssimpModelLoader.h"
 
+/*
+* Danilo Makarewycz and Nathan Wong
+*/
 class Player : public Shape {
 public:
 

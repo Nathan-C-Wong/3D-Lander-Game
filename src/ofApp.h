@@ -15,6 +15,7 @@ class ofApp : public ofBaseApp{
 		void update();
 		void draw();
 
+		 //Restart game written by Danilo Makarewycz 
 		void ofApp::restartGame() {
 			theCam = &cam;
 			collided = false;

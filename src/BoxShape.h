@@ -2,7 +2,9 @@
 
 #include "Shape.h"
 #include "ofMain.h"
-
+/*
+* Danilo Makarewycz and Nathan Wong
+*/
 class BoxShape : public Shape {
 public:
     float width;

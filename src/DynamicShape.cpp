@@ -1,5 +1,7 @@
 #include "DynamicShape.h"
 
+// Danilo Makarewycz and Nathan Wong
+// 
 //Physics 
 DynamicShape::DynamicShape() :
     velocity(0, 0, 0),
