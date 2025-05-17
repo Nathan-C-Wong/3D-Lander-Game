@@ -1,0 +1,1 @@
+fonts, images, sounds and geo go in bin/data
